@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>简历博客 Demo</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <!--
+      本文件是前端页面，使用 Vue3（通过 CDN 模式）构建：
+      - 未登录时：显示登录/注册卡片
+      - 登录后：显示仪表台（发布文章 + 列表）
+      - 与后端的 /api/* 接口通过 fetch 通信
+    -->
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <h1>简历博客</h1>
+        <div v-if="user" class="userbar">
+          <span>欢迎，{{ user.username }}</span>
+          <button class="btn btn-secondary" @click="logout">退出</button>
+        </div>
+      </header>
+
+      <!-- 未登录：只显示登录/注册门面 -->
+      <section class="auth-gate" v-if="!user">
+        <div class="card auth-card">
+          <div class="tabs">
+            <button :class="['tab', authMode==='login'?'active':'']" @click="switchMode('login')">登录</button>
+            <button :class="['tab', authMode==='register'?'active':'']" @click="switchMode('register')">注册</button>
+          </div>
+          <div class="form-item">
+            <label>用户名</label>
+            <input v-model="auth.username" placeholder="请输入用户名">
+          </div>
+          <div class="form-item">
+            <label>密码</label>
+            <input v-model="auth.password" placeholder="请输入密码" type="password">
+          </div>
+          <div class="form-actions">
+            <button v-if="authMode==='login'" class="btn" @click="login">登录</button>
+            <button v-else class="btn" @click="register">注册</button>
+          </div>
+          <!-- 提示改为弹窗 alert，不再在下方显示 -->
+        </div>
+      </section>
+
+      <!-- 已登录：显示仪表台（发布 + 列表） -->
+      <section v-else class="dashboard">
+        <div class="card">
+          <h2>发布文章</h2>
+          <div class="form-item">
+            <label>标题</label>
+            <input v-model="draft.title" placeholder="标题">
+          </div>
+          <div class="form-item">
+            <label>正文</label>
+            <textarea v-model="draft.body" rows="6" placeholder="正文"></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn" @click="createPost">发布</button>
+            <button class="btn btn-secondary" v-if="draft.id" @click="draft={ id:null, title:'', body:'' }">清空</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>文章列表</h2>
+          <ul class="post-list">
+            <li v-for="p in posts" :key="p.id" class="post-item">
+              <div class="post-head">
+                <b>{{ p.title }}</b>
+                <small>作者：{{ p.author }} ｜ 创建：{{ p.created_at }}</small>
+              </div>
+              <div class="post-body">{{ p.body }}</div>
+              <div class="post-actions">
+                <button class="btn" @click="editPost(p)" :disabled="user.userId !== p.author_id">编辑</button>
+                <button class="btn btn-danger" @click="deletePost(p)" :disabled="user.userId !== p.author_id">删除</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <script type="module">
+      import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+      // 简单封装：发送 JSON 请求
+      const api = {
+        async json(url, method='GET', body) {
+          const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined,
+          })
+          return res.json()
+        }
+      }
+
+      createApp({
+        data(){
+          return {
+            posts: [],
+            user: null,
+            auth: { username: '', password: '' },
+            authMode: 'login',
+            draft: { id: null, title: '', body: '' },
+          }
+        },
+        async mounted(){
+          await this.loadPosts()
+        },
+        methods: {
+          // 切换登录/注册视图；支持保留用户名
+          switchMode(mode, keepUsername=false){
+            const name = keepUsername ? (this.auth.username || '') : ''
+            this.authMode = mode
+            this.auth = { username: name, password: '' }
+          },
+          // 获取文章列表
+          async loadPosts(){
+            this.posts = await api.json('/api/posts')
+          },
+          // 注册 -> 切回登录，仅保留用户名
+          async register(){
+            const r = await api.json('/api/register','POST', this.auth)
+            if(r.error){ alert(r.error) } else {
+              alert(r.message)
+              // 注册成功后切到登录，仅保留用户名
+              this.switchMode('login', true)
+            }
+          },
+          // 登录 -> 进入仪表台
+          async login(){
+            const r = await api.json('/api/login','POST', this.auth)
+            if(r.error){ alert(r.error) } else { this.user=r; alert(r.message) }
+          },
+          // 登出 -> 回到登录，仅保留用户名
+          async logout(){
+            const name = this.user ? this.user.username : ''
+            this.user = null
+            const r = await api.json('/api/logout','POST')
+            alert(r.message)
+            // 退出后回到登录，并保留用户名
+            this.auth = { username: name, password: '' }
+            this.authMode = 'login'
+          },
+          // 创建文章
+          async createPost(){
+            if(!this.user) return alert('请先登录')
+            const r = await api.json('/api/posts','POST',{...this.draft, author_id: this.user.userId})
+            if(r.error) return alert(r.error)
+            this.draft={ id:null, title:'', body:'' }
+            await this.loadPosts()
+          },
+          // 编辑：把文章内容填回表单
+          editPost(p){ this.draft={ id:p.id, title:p.title, body:p.body } },
+          // 删除文章（作者专属）
+          async deletePost(p){
+            if(!this.user) return alert('请先登录')
+            if(!confirm('确认删除该文章？')) return
+            const r = await api.json(`/api/posts/${p.id}/delete`,'POST',{ author_id: this.user.userId })
+            if(r.error) return alert(r.error)
+            await this.loadPosts()
+          }
+        }
+      }).mount('#app')
+    </script>
+  </body>
+  </html>
+
+
