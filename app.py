@@ -50,25 +50,13 @@ def favicon():
     return ('', 204)
 
 
-@app.route('/login', methods=['POST'])
-def handle_login():
-    # 示例登录（表单方式），与前端实际使用的 /api/login 分离
-    user_database = {"cjr": "123456"}
-    username = request.form.get('username')
-    password = request.form.get('password')
-    if username not in user_database:
-        return jsonify({"error": "用户不存在"})
-    if user_database[username] != password:
-        return jsonify({"error": "用户密码错误"})
-    return jsonify({"massage": f"欢迎回来{username}"})
-
-
 @app.post('/api/register')
 def api_register():
     """注册接口：
     - 校验必填 -> 查重 -> 插入 users
     """
     data = request.get_json(silent=True) or {}
+    print(data)
     username = (data.get('username') or '').strip()
     password = (data.get('password') or '').strip()
     if not username or not password:
