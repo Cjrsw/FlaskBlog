@@ -61,7 +61,8 @@ def api_register():
     password = (data.get('password') or '').strip()
     if not username or not password:
         return jsonify({"error": "用户名和密码不能为空"}), 400
-    conn = POOL.connection(); cursor = conn.cursor()
+    conn = POOL.connection()
+    cursor = conn.cursor()
     try:
         cursor.execute("SELECT id FROM users WHERE username=%s", (username,))
         if cursor.fetchone():
@@ -69,7 +70,8 @@ def api_register():
         cursor.execute("INSERT INTO users(username, password) VALUES(%s,%s)", (username, password))
         return jsonify({"message": "注册成功"})
     finally:
-        cursor.close(); conn.close()
+        cursor.close()
+        conn.close()
 
 
 @app.post('/api/login')
@@ -83,7 +85,8 @@ def api_login():
     password = (data.get('password') or '').strip()
     if not username or not password:
         return jsonify({"error": "用户名和密码不能为空"}), 400
-    conn = POOL.connection(); cursor = conn.cursor()
+    conn = POOL.connection()
+    cursor = conn.cursor()
     try:
         cursor.execute("SELECT id, password FROM users WHERE username=%s", (username,))
         row = cursor.fetchone()
@@ -94,7 +97,8 @@ def api_login():
             return jsonify({"error": "用户密码错误"}), 401
         return jsonify({"message": "登录成功", "userId": int(user_id), "username": username})
     finally:
-        cursor.close(); conn.close()
+        cursor.close()
+        conn.close()
 
 
 @app.post('/api/logout')
@@ -105,21 +109,23 @@ def api_logout():
 @app.get('/api/posts')
 def api_posts_list():
     """文章列表：联表拿到作者名，按时间倒序"""
-    conn = POOL.connection(); cursor = conn.cursor()
+    conn = POOL.connection()
+    cursor = conn.cursor()
     try:
         cursor.execute(
             """
             SELECT p.id, p.title, p.body, p.created_at, p.updated_at,
-                   u.id AS author_id, u.username AS author
+                   u.id as author_id, u.username as author
             FROM posts p
-            JOIN users u ON p.author_id = u.id
+            LEFT JOIN users u ON p.author_id = u.id
             ORDER BY p.created_at DESC
             """
         )
         rows = dictfetchall(cursor)
         return jsonify(rows)
     finally:
-        cursor.close(); conn.close()
+        cursor.close()
+        conn.close()
 
 
 @app.get('/api/posts/<int:post_id>')
@@ -130,9 +136,9 @@ def api_posts_detail(post_id: int):
         cursor.execute(
             """
             SELECT p.id, p.title, p.body, p.created_at, p.updated_at,
-                   u.id AS author_id, u.username AS author
+                   u.id as author_id, u.username as author
             FROM posts p
-            JOIN users u ON p.author_id = u.id
+            LEFT JOIN users u ON p.author_id = u.id
             WHERE p.id=%s
             """,
             (post_id,)
@@ -179,7 +185,8 @@ def api_posts_update(post_id: int):
     author_id = data.get('author_id')
     if not title or not body or not author_id:
         return jsonify({"error": "标题、正文、作者ID均不能为空"}), 400
-    conn = POOL.connection(); cursor = conn.cursor()
+    conn = POOL.connection()
+    cursor = conn.cursor()
     try:
         cursor.execute("SELECT author_id FROM posts WHERE id=%s", (post_id,))
         row = cursor.fetchone()
@@ -193,7 +200,8 @@ def api_posts_update(post_id: int):
         )
         return jsonify({"message": "已更新"})
     finally:
-        cursor.close(); conn.close()
+        cursor.close()
+        conn.close()
 
 
 @app.post('/api/posts/<int:post_id>/delete')
@@ -201,6 +209,7 @@ def api_posts_delete(post_id: int):
     """删除文章：必须作者本人"""
     data = request.get_json(silent=True) or {}
     author_id = data.get('author_id')
+    print(author_id)
     if not author_id:
         return jsonify({"error": "缺少作者ID"}), 400
     conn = POOL.connection(); cursor = conn.cursor()
