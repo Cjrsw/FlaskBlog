@@ -22,7 +22,7 @@ POOL = PooledDB(
     host=os.getenv("DB_HOST", "127.0.0.1"),    # 主机
     port=int(os.getenv("DB_PORT", "3306")),    # 端口
     user=os.getenv("DB_USER", "root"),         # 用户
-    passwd=os.getenv("DB_PASSWORD", "123456"),  # 密码（你可改成环境变量）
+    passwd=os.getenv("DB_PASSWORD", "273256"),  # 密码（你可改成环境变量）
     charset="utf8mb4",                           # 字符集
     db=os.getenv("DB_NAME", "flaskdemo"),       # 数据库名
     autocommit=True,                              # 自动提交，简化示例
@@ -38,7 +38,7 @@ def dictfetchall(cursor) -> List[Dict[str, Any]]:
 app = Flask(__name__)
 
 
-@app.route("/")
+@app.route("/") 
 def home():
     # 返回内嵌 Vue3 的前端页面
     return send_file("templates/vue.html")
