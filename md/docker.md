@@ -51,5 +51,5 @@ docker run -d
 最后加上运行镜像名字，没写就是最新版本
 名字：版本
 所有命令用反斜杠间隔\后面不能用空格
-![img.png](img.png)
-![img_1.png](img_1.png)
+![img.png](../img/img.png)
+![img_1.png](../img/img_1.png)
