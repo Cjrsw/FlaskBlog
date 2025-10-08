@@ -1,4 +1,4 @@
-## Python中以下值被认为是假值（falsy）：
+## Python中以下值被认为是假值（false）：
 None
 False
 数字 0（包括 0.0, 0j）
@@ -32,5 +32,8 @@ pip freeze > requirements.txt
 ```
 pip uninstall <package_name>
 ```
+## python项目文件夹如果移动，需要重新导入依赖虚拟环境
+虚拟环境并不是完整的python解释器，只是有指向的功能，并且独立存放python依赖
+
 
 
